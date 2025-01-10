@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import random
 
 # Set up API key
 api_key = "YOUR_API_HERE"
@@ -39,10 +40,11 @@ output_file = "MealPrepTracker.xlsx"
 
 try:
     # Load existing Excel file and update the "Recipes" sheet
-    with pd.ExcelWriter(output_file, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-        df.to_excel(writer, sheet_name="Recipes", index=False)
-    print(f"Recipes successfully added to {output_file}.")
+    existing_df = pd.read_excel(output_file, sheet_name="Recipes")
+    combined_df = pd.concat([existing_df, df]).drop_duplicates(subset="Recipe Name")
 except FileNotFoundError:
     # If the file doesn't exist, create a new one
-    df.to_excel(output_file, sheet_name="Recipes", index=False)
-    print(f"New file {output_file} created with 'Recipes' sheet.")
+    combined_df = df
+
+# Save the updated recipes to the "Recipes" sheet
+print(f"{len(recipes)} recipes successfully added to the 'Recipes' sheet in {output_file}.")
