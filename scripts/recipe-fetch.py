@@ -35,3 +35,12 @@ for recipe in data.get("results", []):
 df = pd.DataFrame(recipes)
 output_file = "MealPrepTracker.xlsx"
 
+try:
+    # Load existing Excel file and update the "Recipes" sheet
+    with pd.ExcelWriter(output_file, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        df.to_excel(writer, sheet_name="Recipes", index=False)
+    print(f"Recipes successfully added to {output_file}.")
+except FileNotFoundError:
+    # If the file doesn't exist, create a new one
+    df.to_excel(output_file, sheet_name="Recipes", index=False)
+    print(f"New file {output_file} created with 'Recipes' sheet.")
