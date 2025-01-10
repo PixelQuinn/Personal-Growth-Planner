@@ -1,69 +1,71 @@
 import requests
 import pandas as pd
+from openpyxl import load_workbook
 
-# Set up API key
-api_key = "YOUR_API_KEY"
-search_url = "https://api.spoonacular.com/recipes/complexSearch"
-info_url = "https://api.spoonacular.com/recipes/{id}/information"
+# Edamam API credentials
+app_id = "YOUR_APP_ID"  # Replace with your Edamam App ID
+app_key = "YOUR_APP_KEY"  # Replace with your Edamam App Key
+user_id = "YOUR_USER_ID"  # Replace with your Edamam Account User ID
+base_url = "https://api.edamam.com/search"
 
-# User input for parameters
+# Function to fetch recipes
+def fetch_recipes(meal_type, max_calories, num_recipes):
+    recipes = []
+    params = {
+        "q": meal_type,
+        "app_id": app_id,
+        "app_key": app_key,
+        "calories": f"0-{max_calories}",
+        "to": num_recipes  # Number of recipes to fetch
+    }
+    headers = {
+        "Edamam-Account-User": user_id
+    }
+    response = requests.get(base_url, params=params, headers=headers)
+    if response.status_code != 200:
+        print(f"Error fetching recipes: {response.status_code}, {response.text}")
+        return recipes
+
+    data = response.json()
+    for recipe_entry in data.get("hits", []):
+        recipe_data = recipe_entry.get("recipe", {})
+        recipes.append({
+            "Meal Type": meal_type.capitalize(),
+            "Recipe Name": recipe_data.get("label", "N/A"),
+            "Calories Per Serving": round(recipe_data.get("calories", 0) / recipe_data.get("yield", 1)),
+            "Servings": recipe_data.get("yield", "N/A"),
+            "Ingredients": ", ".join(recipe_data.get("ingredientLines", [])),
+            "Instructions": recipe_data.get("url", "N/A")
+        })
+    return recipes
+
+# User input
 print("Welcome to the Recipe Fetcher!")
-meal_type = input("Enter the meal type (e.g., breakfast, lunch, dinner): ").strip().lower()
-recipe_count = int(input("How many recipes would you like to fetch?: "))
-calorie_limit = int(input("Enter a calorie limit per recipe: "))
+meal_type = input("Enter the meal type (e.g., breakfast, lunch, dinner, snack): ").strip().lower()
+max_calories = input(f"Enter the maximum calories for {meal_type}: ").strip()
+num_recipes = int(input("How many recipes would you like to fetch?: "))
 
-# Define query parameters
-params = {
-    "apiKey": api_key,
-    "number": recipe_count,
-    "type": meal_type,
-    "maxCalories": calorie_limit,  # Filter recipes by calorie limit
-}
+# Fetch recipes
+new_recipes = fetch_recipes(meal_type, max_calories, num_recipes)
 
-# API request to search for recipes
-response = requests.get(search_url, params=params)
-data = response.json()
-
-# Extract relevant recipe information
-recipes = []
-for recipe in data.get("results", []):
-    recipe_id = recipe.get("id")
-    title = recipe.get("title")
-    recipe_url = f"https://spoonacular.com/recipes/{recipe_id}"
-
-    # Fetch detailed recipe info
-    info_response = requests.get(info_url.format(id=recipe_id), params={"apiKey": api_key})
-    info_data = info_response.json()
-
-    # Extract ingredients
-    ingredients = ", ".join(
-        [ingredient.get("original", "") for ingredient in info_data.get("extendedIngredients", [])]
-    ) if info_data.get("extendedIngredients") else "N/A"
-
-    # Append recipe data
-    recipes.append({
-        "Recipe Name": title,
-        "Meal Type": meal_type.capitalize(),
-        "Recipe URL": recipe_url,
-        "Ingredients": ingredients,
-    })
-
-# Convert recipes to a DataFrame
-df = pd.DataFrame(recipes)
-
-# Save recipes to Excel
+# Load existing data from Excel
 output_file = "MealPrepTracker.xlsx"
 try:
-    # Load existing file if it exists
-    try:
-        existing_df = pd.read_excel(output_file, sheet_name="Recipes")
-        combined_df = pd.concat([existing_df, df]).drop_duplicates(subset="Recipe Name")
-    except FileNotFoundError:
-        combined_df = df
+    existing_df = pd.read_excel(output_file, sheet_name="Recipes")
+except FileNotFoundError:
+    existing_df = pd.DataFrame()  # No existing file, start with empty DataFrame
 
-    # Write to Excel
+# Combine new recipes with existing data
+df_new_recipes = pd.DataFrame(new_recipes)
+if not existing_df.empty:
+    combined_df = pd.concat([existing_df, df_new_recipes]).drop_duplicates(subset=["Recipe Name"])
+else:
+    combined_df = df_new_recipes
+
+# Save updated data back to Excel
+try:
     with pd.ExcelWriter(output_file, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         combined_df.to_excel(writer, sheet_name="Recipes", index=False)
-    print(f"{len(recipes)} recipes successfully added to the 'Recipes' sheet in {output_file}.")
+    print(f"Successfully added {len(new_recipes)} new recipes to {output_file}.")
 except Exception as e:
-    print(f"Failed to save to Excel. Error: {e}")
+    print(f"Error saving recipes to Excel: {e}")
