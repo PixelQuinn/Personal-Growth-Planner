@@ -18,3 +18,8 @@ params = {
     "type": meal_type, # <-- Filter by meal type
     "maxCalories": calorie_limit # <-- The limit on calories per meal
 }
+
+# API request
+response = requests.get(base_url, params=params)
+data = response.json()
+
