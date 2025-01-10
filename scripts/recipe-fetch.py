@@ -30,3 +30,8 @@ for recipe in data.get("results", []):
         "Image URL": recipe.get("image"),
         "Recipe URL": f"https://spoonacular.com/recipes/{recipe.get('id')}",
     })
+
+# Save recipes to Excel
+df = pd.DataFrame(recipes)
+output_file = "MealPrepTracker.xlsx"
+
