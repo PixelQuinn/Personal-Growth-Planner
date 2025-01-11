@@ -49,3 +49,9 @@ This Python script fetches recipes dynamically and updates the **Recipes Sheet**
 ### Prerequisites
 - Install Python libraries:
   pip install pandas openpyxl requests
+
+## Future Add Ons:
+- Mood Tracker
+- Habit Tracker
+- Sleep Tracker
+- Tableau Dashboard to visualize it all in one place!
